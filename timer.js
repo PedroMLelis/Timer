@@ -1,9 +1,21 @@
-let timers = JSON.parse(localStorage.getItem("timers") || "[]");
+let timers = [];
 let endTime = null;
 
+// CARREGAR CONFIG
+function loadTimers() {
+    if (typeof Office !== "undefined" && Office.context?.document) {
+        timers = Office.context.document.settings.get("timers") || [];
+    } else {
+        timers = JSON.parse(localStorage.getItem("timers") || "[]");
+    }
+}
+
+// LOOP
 setInterval(() => {
 
     if (typeof Office === "undefined") return;
+
+    loadTimers();
 
     Office.context.document.getSelectedDataAsync(
         Office.CoercionType.SlideRange,
@@ -18,10 +30,10 @@ setInterval(() => {
 
             if (!active) {
                 document.getElementById("timer").innerText = "";
+                endTime = null;
                 return;
             }
 
-            // inicia timer
             if (!endTime) {
                 endTime = Date.now() + active.duration * 1000;
             }
@@ -34,11 +46,6 @@ setInterval(() => {
 
             document.getElementById("timer").innerText =
                 `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-
-            // reset ao sair do range
-            if (slide < active.startSlide || slide > active.endSlide) {
-                endTime = null;
-            }
         }
     );
 
