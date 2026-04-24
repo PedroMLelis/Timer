@@ -1,39 +1,37 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Gerenciar Timers</title>
+    <meta charset="UTF-8">
+    <title>Gerenciar Timers</title>
 
-<body>
-
-    <!-- seu HTML aqui -->
-
+    <!-- Office -->
     <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
-    <script src="taskpane.js?v=6"></script>
 
-</body>
+    <style>
+        body { font-family: Segoe UI; padding:10px; }
 
-<style>
-body { font-family: Segoe UI; padding:10px; }
+        .hidden { display:none; }
 
-.hidden { display:none; }
+        .timer-item {
+            border:1px solid #ccc;
+            padding:8px;
+            margin-bottom:6px;
+            border-radius:4px;
+            font-size:12px;
+        }
 
-.timer-item {
-    border:1px solid #ccc;
-    padding:8px;
-    margin-bottom:6px;
-    border-radius:4px;
-    font-size:12px;
-}
+        button {
+            margin-top:8px;
+            padding:6px;
+            width:100%;
+            cursor: pointer;
+        }
 
-button {
-    margin-top:8px;
-    padding:6px;
-    width:100%;
-}
-
-#status { margin-top:10px; font-size:12px; }
-</style>
+        #status {
+            margin-top:10px;
+            font-size:12px;
+        }
+    </style>
 </head>
 
 <body>
@@ -67,14 +65,15 @@ button {
     <label>Slide ao finalizar</label>
     <input id="jump" type="number" value="0">
 
-    <button id="save">Salvar</button>
-    <button id="cancel">Cancelar</button>
+    <button id="save" type="button">Salvar</button>
+    <button id="cancel" type="button">Cancelar</button>
 
 </div>
 
 <div id="status"></div>
 
-<script src="taskpane.js?v=5"></script>
+<!-- 🔥 SEU SCRIPT (ESSENCIAL) -->
+<script src="https://pedromlelis.github.io/Timer/taskpane.js?v=8"></script>
 
 </body>
 </html>
