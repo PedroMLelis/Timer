@@ -25,3 +25,20 @@ function insertTimer() {
         { coercionType: Office.CoercionType.Html }
     );
 }
+if (typeof Office === "undefined") {
+    console.log("Rodando fora do Office");
+
+    document.getElementById("save").onclick = () => {
+        const config = {
+            startSlide: parseInt(document.getElementById("start").value),
+            endSlide: parseInt(document.getElementById("end").value),
+            duration: parseInt(document.getElementById("duration").value),
+            color: document.getElementById("color").value,
+            size: parseInt(document.getElementById("size").value),
+            jumpTarget: parseInt(document.getElementById("jump").value)
+        };
+
+        localStorage.setItem("timerConfig", JSON.stringify(config));
+        alert("Salvo (modo navegador)");
+    };
+}
