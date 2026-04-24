@@ -1,78 +1,102 @@
-console.log("VERSAO FINAL TASKPANE");
+console.log("TASKPANE MULTI TIMER");
 
+let timers = [];
+
+// 🔄 INIT
 document.addEventListener("DOMContentLoaded", () => {
-    const btn = document.getElementById("save");
-    const status = document.getElementById("status");
+    loadTimers();
+    renderList();
 
-    if (!btn) {
-        console.error("Botão salvar não encontrado");
+    document.getElementById("btn-add").onclick = showForm;
+    document.getElementById("cancel").onclick = hideForm;
+    document.getElementById("save").onclick = saveTimer;
+});
+
+// 💾 LOAD
+function loadTimers() {
+    timers = JSON.parse(localStorage.getItem("timers") || "[]");
+}
+
+// 💾 SAVE
+function persistTimers() {
+    localStorage.setItem("timers", JSON.stringify(timers));
+}
+
+// 📋 LISTA
+function renderList() {
+    const list = document.getElementById("list-view");
+
+    if (timers.length === 0) {
+        list.innerHTML = "<p>Nenhum timer criado</p>";
         return;
     }
 
-    btn.onclick = () => {
-        const config = {
-            startSlide: parseInt(document.getElementById("start").value),
-            endSlide: parseInt(document.getElementById("end").value),
-            duration: parseInt(document.getElementById("duration").value),
-            color: document.getElementById("color").value,
-            size: parseInt(document.getElementById("size").value),
-            jumpTarget: parseInt(document.getElementById("jump").value)
-        };
-
-        console.log("Config:", config);
-
-        // 🔵 Dentro do PowerPoint
-        if (typeof Office !== "undefined" && Office.context?.document) {
-
-            try {
-                Office.context.document.settings.set("timerConfig", config);
-
-                Office.context.document.settings.saveAsync((res) => {
-                    if (res.status === Office.AsyncResultStatus.Succeeded) {
-                        console.log("Salvo no PowerPoint");
-                        status.innerText = "✅ Salvo no PowerPoint";
-                        status.style.color = "green";
-                    } else {
-                        console.error(res.error);
-                        status.innerText = "❌ Erro ao salvar";
-                        status.style.color = "red";
-                    }
-                });
-
-            } catch (err) {
-                console.error("Erro Office:", err);
-                fallbackSave(config);
-            }
-
-        } else {
-            // 🌐 Navegador
-            fallbackSave(config);
-        }
-    };
-});
-
-// 🔁 fallback
-function fallbackSave(config) {
-    const status = document.getElementById("status");
-
-    try {
-        localStorage.setItem("timerConfig", JSON.stringify(config));
-        console.log("Salvo localStorage");
-        status.innerText = "💾 Salvo (modo navegador)";
-        status.style.color = "blue";
-    } catch (err) {
-        console.error(err);
-        status.innerText = "❌ Erro ao salvar localmente";
-        status.style.color = "red";
-    }
+    list.innerHTML = timers.map(t => `
+        <div class="timer-item">
+            Slides ${t.startSlide} - ${t.endSlide}<br>
+            ${t.duration}s
+        </div>
+    `).join("");
 }
 
-// 🚀 Inserir timer no slide
-function insertTimer() {
-    if (typeof Office === "undefined") return;
+// 👁️ FORM
+function showForm() {
+    document.getElementById("form-view").classList.remove("hidden");
+}
 
-    Office.context.document.setSelectedDataAsync(
-        `<iframe src="https://pedromelis.github.io/Timer/timer.html" width="300" height="150" frameborder="0"></iframe>`,
-        { coercionType: Office.CoercionType.Html }
+function hideForm() {
+    document.getElementById("form-view").classList.add("hidden");
+}
+
+// 🚨 VALIDAÇÃO DE SOBREPOSIÇÃO
+function hasOverlap(newTimer) {
+    return timers.some(t =>
+        newTimer.startSlide <= t.endSlide &&
+        newTimer.endSlide >= t.startSlide
     );
+}
+
+// 💾 SALVAR TIMER
+function saveTimer() {
+    const status = document.getElementById("status");
+
+    const newTimer = {
+        id: Date.now().toString(),
+        startSlide: parseInt(document.getElementById("start").value),
+        endSlide: parseInt(document.getElementById("end").value),
+        duration: parseInt(document.getElementById("duration").value),
+        color: document.getElementById("color").value,
+        size: parseInt(document.getElementById("size").value),
+        jumpTarget: parseInt(document.getElementById("jump").value)
+    };
+
+    // 🚨 validação básica
+    if (newTimer.startSlide > newTimer.endSlide) {
+        status.innerText = "❌ Slide inicial maior que final";
+        status.style.color = "red";
+        return;
+    }
+
+    // 🚨 validação de colisão
+    const conflict = timers.find(t =>
+        newTimer.startSlide <= t.endSlide &&
+        newTimer.endSlide >= t.startSlide
+    );
+
+    if (conflict) {
+        status.innerText =
+            `❌ Conflito com intervalo ${conflict.startSlide}-${conflict.endSlide}`;
+        status.style.color = "red";
+        return;
+    }
+
+    // ✅ salvar
+    timers.push(newTimer);
+    persistTimers();
+
+    status.innerText = "✅ Timer criado!";
+    status.style.color = "green";
+
+    hideForm();
+    renderList();
 }
