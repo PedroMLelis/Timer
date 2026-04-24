@@ -1,67 +1,45 @@
-let config;
-let polling;
+let timers = JSON.parse(localStorage.getItem("timers") || "[]");
+let endTime = null;
 
-Office.onReady(() => {
-    config = JSON.parse(localStorage.getItem("timerConfig"));
-    if (!config) return;
+setInterval(() => {
 
-    applyStyle();
-    startPolling();
-});
+    if (typeof Office === "undefined") return;
 
-function applyStyle() {
-    const el = document.getElementById("timer-display");
-    el.style.color = config.color;
-    el.style.fontSize = config.size + "px";
-}
+    Office.context.document.getSelectedDataAsync(
+        Office.CoercionType.SlideRange,
+        (res) => {
+            if (res.status !== Office.AsyncResultStatus.Succeeded) return;
 
-function startPolling() {
-    polling = setInterval(() => {
-        Office.context.document.getSelectedDataAsync(
-            Office.CoercionType.SlideRange,
-            (res) => {
-                if (res.status !== Office.AsyncResultStatus.Succeeded) return;
+            const slide = res.value.slides[0].index;
 
-                const index = res.value.slides[0].index;
-                processSlide(index);
+            const active = timers.find(t =>
+                slide >= t.startSlide && slide <= t.endSlide
+            );
+
+            if (!active) {
+                document.getElementById("timer").innerText = "";
+                return;
             }
-        );
-    }, 1000);
-}
 
-function processSlide(index) {
-    if (index < config.startSlide || index > config.endSlide) {
-        document.body.style.visibility = "hidden";
-        return;
-    }
+            // inicia timer
+            if (!endTime) {
+                endTime = Date.now() + active.duration * 1000;
+            }
 
-    document.body.style.visibility = "visible";
+            const ms = Math.max(0, endTime - Date.now());
 
-    if (!localStorage.getItem("timerEnd")) {
-        localStorage.setItem(
-            "timerEnd",
-            Date.now() + config.duration * 1000
-        );
-    }
+            const sec = Math.ceil(ms / 1000);
+            const m = Math.floor(sec / 60);
+            const s = sec % 60;
 
-    const end = parseInt(localStorage.getItem("timerEnd"));
-    const left = Math.max(0, end - Date.now());
+            document.getElementById("timer").innerText =
+                `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
 
-    update(left);
+            // reset ao sair do range
+            if (slide < active.startSlide || slide > active.endSlide) {
+                endTime = null;
+            }
+        }
+    );
 
-    if (left === 0 && config.jumpTarget > 0) {
-        Office.context.document.goToByIdAsync(
-            config.jumpTarget,
-            Office.GoToType.Index
-        );
-    }
-}
-
-function update(ms) {
-    const s = Math.ceil(ms / 1000);
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-
-    document.getElementById("timer-display").innerText =
-        `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
-}
+}, 1000);
