@@ -3,8 +3,10 @@ let editingId = null;
 
 // INIT
 document.addEventListener("DOMContentLoaded", () => {
-    loadTimers();
-    renderList();
+    loadTimers((data) => {
+        timers = data;
+        renderList();
+    });
 
     document.getElementById("btn-add").onclick = () => {
         editingId = null;
@@ -16,16 +18,40 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("save").onclick = saveTimer;
 });
 
-// LOAD / SAVE
-function loadTimers() {
-    timers = JSON.parse(localStorage.getItem("timers") || "[]");
+// ===============================
+// STORAGE (PPT + WEB)
+// ===============================
+
+function saveTimers() {
+    if (typeof Office !== "undefined" && Office.context?.document) {
+        Office.context.document.settings.set("timers", timers);
+
+        Office.context.document.settings.saveAsync((res) => {
+            if (res.status === Office.AsyncResultStatus.Succeeded) {
+                console.log("Salvo no PowerPoint");
+            } else {
+                console.error(res.error);
+            }
+        });
+    } else {
+        localStorage.setItem("timers", JSON.stringify(timers));
+    }
 }
 
-function persistTimers() {
-    localStorage.setItem("timers", JSON.stringify(timers));
+function loadTimers(callback) {
+    if (typeof Office !== "undefined" && Office.context?.document) {
+        const data = Office.context.document.settings.get("timers");
+        callback(data || []);
+    } else {
+        const data = JSON.parse(localStorage.getItem("timers") || "[]");
+        callback(data);
+    }
 }
 
-// LISTA
+// ===============================
+// UI
+// ===============================
+
 function renderList() {
     const list = document.getElementById("list-view");
 
@@ -57,15 +83,18 @@ function hideForm() {
 }
 
 function clearForm() {
-    document.getElementById("start").value = "";
-    document.getElementById("end").value = "";
-    document.getElementById("duration").value = "";
-    document.getElementById("color").value = "#000000";
-    document.getElementById("size").value = "60";
-    document.getElementById("jump").value = "0";
+    start.value = "";
+    end.value = "";
+    duration.value = "";
+    color.value = "#000000";
+    size.value = "60";
+    jump.value = "0";
 }
 
-// SALVAR
+// ===============================
+// CRUD
+// ===============================
+
 function saveTimer() {
     const status = document.getElementById("status");
 
@@ -101,7 +130,7 @@ function saveTimer() {
         timers.push(newTimer);
     }
 
-    persistTimers();
+    saveTimers();
     hideForm();
     renderList();
 
@@ -128,14 +157,17 @@ function editTimer(id) {
 // EXCLUIR
 function deleteTimer(id) {
     timers = timers.filter(t => t.id !== id);
-    persistTimers();
+    saveTimers();
     renderList();
 }
 
-// 🚀 INSERIR NO SLIDE
+// ===============================
+// INSERIR NO SLIDE
+// ===============================
+
 function insertTimer() {
     if (typeof Office === "undefined") {
-        alert("Abra no PowerPoint");
+        console.log("Somente no PowerPoint");
         return;
     }
 
