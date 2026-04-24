@@ -6,12 +6,12 @@ Office.onReady(() => {
 
 function saveConfig() {
     const config = {
-        startSlide: parseInt(start.value),
-        endSlide: parseInt(end.value),
-        duration: parseInt(duration.value),
-        color: color.value,
-        size: parseInt(size.value),
-        jumpTarget: parseInt(jump.value)
+        startSlide: parseInt(document.getElementById("start").value),
+        endSlide: parseInt(document.getElementById("end").value),
+        duration: parseInt(document.getElementById("duration").value),
+        color: document.getElementById("color").value,
+        size: parseInt(document.getElementById("size").value),
+        jumpTarget: parseInt(document.getElementById("jump").value)
     };
 
     localStorage.setItem("timerConfig", JSON.stringify(config));
