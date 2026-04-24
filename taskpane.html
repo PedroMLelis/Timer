@@ -1,79 +1,73 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <title>Configurar Timer</title>
+<meta charset="UTF-8">
+<title>Gerenciar Timers</title>
 
-    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
 
-    <!-- Anti-cache -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
+<style>
+body { font-family: Segoe UI; padding:10px; }
 
-    <style>
-        body {
-            font-family: Segoe UI, sans-serif;
-            padding: 10px;
-            margin: 0;
-        }
+.hidden { display:none; }
 
-        label {
-            display: block;
-            margin-top: 8px;
-            font-size: 12px;
-        }
+.timer-item {
+    border:1px solid #ccc;
+    padding:8px;
+    margin-bottom:6px;
+    border-radius:4px;
+    font-size:12px;
+}
 
-        input {
-            width: 100%;
-            padding: 5px;
-            margin-top: 2px;
-            font-size: 12px;
-            box-sizing: border-box;
-        }
+button {
+    margin-top:8px;
+    padding:6px;
+    width:100%;
+}
 
-        button {
-            margin-top: 12px;
-            width: 100%;
-            padding: 8px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        #status {
-            margin-top: 10px;
-            font-size: 12px;
-        }
-    </style>
+#status { margin-top:10px; font-size:12px; }
+</style>
 </head>
+
 <body>
 
-    <h3>Configurar Timer</h3>
+<h3>Timers</h3>
 
-    <label for="start">Slide Inicial</label>
+<div id="list-view"></div>
+
+<button id="btn-add">+ Adicionar Timer</button>
+
+<!-- FORM -->
+<div id="form-view" class="hidden">
+
+    <h4>Novo Timer</h4>
+
+    <label>Slide Inicial</label>
     <input id="start" type="number" value="1">
 
-    <label for="end">Slide Final</label>
-    <input id="end" type="number" value="10">
+    <label>Slide Final</label>
+    <input id="end" type="number" value="5">
 
-    <label for="duration">Duração (s)</label>
+    <label>Duração (s)</label>
     <input id="duration" type="number" value="300">
 
-    <label for="color">Cor</label>
+    <label>Cor</label>
     <input id="color" type="color" value="#000000">
 
-    <label for="size">Tamanho</label>
+    <label>Tamanho</label>
     <input id="size" type="number" value="60">
 
-    <label for="jump">Slide ao finalizar</label>
+    <label>Slide ao finalizar</label>
     <input id="jump" type="number" value="0">
 
-    <button id="save" type="button">Salvar</button>
+    <button id="save">Salvar</button>
+    <button id="cancel">Cancelar</button>
 
-    <div id="status"></div>
+</div>
 
-    <!-- IMPORTANTE: versionamento -->
-    <script src="taskpane.js?v=3"></script>
+<div id="status"></div>
+
+<script src="taskpane.js?v=5"></script>
 
 </body>
 </html>
