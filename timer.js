@@ -2,7 +2,7 @@ let config;
 let polling;
 
 Office.onReady(() => {
-    config = Office.context.document.settings.get("timerConfig");
+    config = JSON.parse(localStorage.getItem("timerConfig"));
     if (!config) return;
 
     applyStyle();
