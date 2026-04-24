@@ -1,3 +1,5 @@
+console.log("VERSAO NOVA 123");
+
 Office.onReady(() => {
     document.getElementById("save").onclick = saveConfig;
 });
