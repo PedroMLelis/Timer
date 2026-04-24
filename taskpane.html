@@ -1,34 +1,79 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
-<link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <title>Configurar Timer</title>
+
+    <!-- Office.js -->
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+
+    <!-- Evita cache pesado -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
+    <style>
+        body {
+            font-family: Segoe UI, sans-serif;
+            padding: 10px;
+            margin: 0;
+        }
+
+        label {
+            display: block;
+            margin-top: 8px;
+            font-size: 12px;
+        }
+
+        input {
+            width: 100%;
+            padding: 5px;
+            margin-top: 2px;
+            font-size: 12px;
+            box-sizing: border-box;
+        }
+
+        button {
+            margin-top: 12px;
+            width: 100%;
+            padding: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
 
-<h3>Configurar Timer</h3>
+    <h3>Configurar Timer</h3>
 
-<label>Slide Inicial</label>
-<input id="start" type="number" value="1">
+    <label for="start">Slide Inicial</label>
+    <input id="start" type="number" value="1">
 
-<label>Slide Final</label>
-<input id="end" type="number" value="10">
+    <label for="end">Slide Final</label>
+    <input id="end" type="number" value="10">
 
-<label>Duração (s)</label>
-<input id="duration" type="number" value="300">
+    <label for="duration">Duração (s)</label>
+    <input id="duration" type="number" value="300">
 
-<label>Cor</label>
-<input id="color" type="color" value="#000000">
+    <label for="color">Cor</label>
+    <input id="color" type="color" value="#000000">
 
-<label>Tamanho</label>
-<input id="size" type="number" value="60">
+    <label for="size">Tamanho</label>
+    <input id="size" type="number" value="60">
 
-<label>Slide ao finalizar</label>
-<input id="jump" type="number" value="0">
+    <label for="jump">Slide ao finalizar</label>
+    <input id="jump" type="number" value="0">
 
-<button id="save">Salvar</button>
+    <!-- IMPORTANTE: type="button" evita comportamento estranho -->
+    <button id="save" type="button">Salvar</button>
 
-<script src="taskpane.js"></script>
+    <!-- Versão para debug -->
+    <div id="debug" style="margin-top:10px; font-size:10px; color:#666;">
+        versão: 1.0
+    </div>
+
+    <!-- JS com versionamento anti-cache -->
+    <script src="taskpane.js?v=2"></script>
+
 </body>
 </html>
