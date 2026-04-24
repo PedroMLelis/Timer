@@ -1,15 +1,15 @@
-console.log("VERSAO NOVA 1.0");
+console.log("VERSAO FINAL TASKPANE");
 
-// Espera o DOM carregar (funciona em qualquer ambiente)
 document.addEventListener("DOMContentLoaded", () => {
-    const saveBtn = document.getElementById("save");
+    const btn = document.getElementById("save");
+    const status = document.getElementById("status");
 
-    if (!saveBtn) {
+    if (!btn) {
         console.error("Botão salvar não encontrado");
         return;
     }
 
-    saveBtn.onclick = () => {
+    btn.onclick = () => {
         const config = {
             startSlide: parseInt(document.getElementById("start").value),
             endSlide: parseInt(document.getElementById("end").value),
@@ -19,19 +19,23 @@ document.addEventListener("DOMContentLoaded", () => {
             jumpTarget: parseInt(document.getElementById("jump").value)
         };
 
-        console.log("Config capturada:", config);
+        console.log("Config:", config);
 
-        // 🔥 Se estiver dentro do PowerPoint
+        // 🔵 Dentro do PowerPoint
         if (typeof Office !== "undefined" && Office.context?.document) {
+
             try {
                 Office.context.document.settings.set("timerConfig", config);
 
                 Office.context.document.settings.saveAsync((res) => {
                     if (res.status === Office.AsyncResultStatus.Succeeded) {
-                        alert("Configuração salva no PowerPoint!");
+                        console.log("Salvo no PowerPoint");
+                        status.innerText = "✅ Salvo no PowerPoint";
+                        status.style.color = "green";
                     } else {
-                        console.error("Erro ao salvar:", res.error);
-                        alert("Erro ao salvar no PowerPoint.");
+                        console.error(res.error);
+                        status.innerText = "❌ Erro ao salvar";
+                        status.style.color = "red";
                     }
                 });
 
@@ -41,40 +45,34 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
         } else {
-            // 🌐 Modo navegador
+            // 🌐 Navegador
             fallbackSave(config);
         }
     };
 });
 
-// 🔁 Fallback para navegador / web limitado
+// 🔁 fallback
 function fallbackSave(config) {
+    const status = document.getElementById("status");
+
     try {
         localStorage.setItem("timerConfig", JSON.stringify(config));
-        alert("Configuração salva (modo navegador)");
+        console.log("Salvo localStorage");
+        status.innerText = "💾 Salvo (modo navegador)";
+        status.style.color = "blue";
     } catch (err) {
-        console.error("Erro localStorage:", err);
-        alert("Erro ao salvar localmente");
+        console.error(err);
+        status.innerText = "❌ Erro ao salvar localmente";
+        status.style.color = "red";
     }
 }
 
-// 🚀 Inserir timer no slide (chamado pelo manifest)
+// 🚀 Inserir timer no slide
 function insertTimer() {
-    if (typeof Office === "undefined") {
-        alert("Isso só funciona dentro do PowerPoint");
-        return;
-    }
+    if (typeof Office === "undefined") return;
 
     Office.context.document.setSelectedDataAsync(
         `<iframe src="https://pedromelis.github.io/Timer/timer.html" width="300" height="150" frameborder="0"></iframe>`,
-        { coercionType: Office.CoercionType.Html },
-        (res) => {
-            if (res.status === Office.AsyncResultStatus.Succeeded) {
-                console.log("Timer inserido com sucesso");
-            } else {
-                console.error("Erro ao inserir:", res.error);
-                alert("Erro ao inserir timer");
-            }
-        }
+        { coercionType: Office.CoercionType.Html }
     );
 }
