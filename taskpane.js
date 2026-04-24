@@ -12,8 +12,8 @@ function saveConfig() {
         jumpTarget: parseInt(jump.value)
     };
 
-    Office.context.document.settings.set("timerConfig", config);
-    Office.context.document.settings.saveAsync();
+    localStorage.setItem("timerConfig", JSON.stringify(config));
+    alert("Configuração salva!");
 }
 
 // CHAMADO PELO BOTÃO DO MANIFEST
