@@ -1,0 +1,19 @@
+body {
+    margin: 0;
+    font-family: Segoe UI;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+}
+
+input, button {
+    margin-bottom: 8px;
+    padding: 5px;
+    font-size: 12px;
+}
+
+#timer-display {
+    font-weight: bold;
+    text-align: center;
+    width: 100%;
+}
