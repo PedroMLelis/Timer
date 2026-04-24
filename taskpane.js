@@ -166,13 +166,17 @@ function deleteTimer(id) {
 // ===============================
 
 function insertTimer() {
-    if (typeof Office === "undefined") {
-        console.log("Somente no PowerPoint");
+
+    if (!Office || !Office.context || !Office.context.document) {
+        alert("❌ Isso só funciona dentro do PowerPoint");
         return;
     }
 
     Office.context.document.setSelectedDataAsync(
-        `<iframe src="https://pedromlelis.github.io/Timer/timer.html" width="300" height="150" frameborder="0"></iframe>`,
-        { coercionType: Office.CoercionType.Html }
+        `<div style="font-size:30px">TIMER</div>`,
+        { coercionType: Office.CoercionType.Html },
+        (res) => {
+            console.log(res);
+        }
     );
 }
