@@ -146,6 +146,7 @@
             }
         }
 
+        AFTER
         // --- INSERÇÃO NO SLIDE ---
         async function insertTimerToAllSlides() {
             logDebug("Iniciando inserção em TODOS os slides...");
@@ -157,7 +158,8 @@
                     
                     for (let i = 0; i < slides.items.length; i++) {
                         const shapes = slides.items[i].shapes;
-                        const textShape = shapes.addTextBox("00:00", { left: 800, top: 20, width: 150, height: 50 });
+                        // Ajustado para left: 20 para garantir visibilidade
+                        const textShape = shapes.addTextBox("00:00", { left: 20, top: 20, width: 150, height: 50 });
                         textShape.name = "Timer_Global";
                         textShape.textFrame.textRange.font.name = document.getElementById('fontName').value;
                         textShape.textFrame.textRange.font.size = parseInt(document.getElementById('fontSize').value);
@@ -192,10 +194,12 @@
 
                     for (let i = startIdx; i <= endIdx; i++) {
                         const shapes = slides.items[i].shapes;
-                        const textShape = shapes.addTextBox("00:00", { left: 800, top: 20, width: 150, height: 50 });
+                        // Ajustado para left: 20 para garantir visibilidade
+                        const textShape = shapes.addTextBox("00:00", { left: 20, top: 20, width: 150, height: 50 });
                         textShape.name = "Timer_Global";
                         textShape.textFrame.textRange.font.name = font;
-                        textShape.textRange.font.size = size;
+                        // CORREÇÃO: Adicionado .textFrame antes do .textRange
+                        textShape.textFrame.textRange.font.size = size;
                     }
                     await context.sync();
                 });
