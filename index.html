@@ -26,6 +26,12 @@
         .group-item { background: #fff; border: 1px solid #ddd; padding: 10px; border-radius: 4px; margin-bottom: 10px; }
         .status-card { background: #333; color: #0f0; padding: 10px; border-radius: 4px; margin-top: 10px; font-family: monospace; text-align: center; font-size: 1.4em; }
         .group-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        
+        .debug-panel { background: #1e1e1e; color: #d4d4d4; font-family: monospace; font-size: 11px; padding: 10px; height: 120px; overflow-y: auto; border-top: 2px solid #primary; position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;}
+        .debug-error { color: #f48771; }
+        .debug-success { color: #89d185; }
+        /* Ajuste para o conteúdo não ficar escondido atrás do debug */
+        .content { padding-bottom: 140px; } 
     </style>
 </head>
 <body>
@@ -72,8 +78,24 @@
         <div id="groupsContainer" style="margin-top: 15px;"></div>
     </div>
 
+    <div id="debugPanel" class="debug-panel">
+        <div>[Sistema] Debug iniciado. Aguardando ações...</div>
+    </div>
+
     <script>
         let groups = [];
+        
+        // --- SISTEMA DE DEBUG ---
+        function logDebug(msg, type = 'info') {
+            const panel = document.getElementById('debugPanel');
+            let className = '';
+            if (type === 'error') className = 'debug-error';
+            if (type === 'success') className = 'debug-success';
+            
+            const time = new Date().toLocaleTimeString();
+            panel.innerHTML += `<div class="${className}">[${time}] ${msg}</div>`;
+            panel.scrollTop = panel.scrollHeight; // Auto-scroll para o fim
+        }
         let geralState = { seconds: 0, total: 0, isRunning: false, interval: null };
         let activeGroupId = null;
 
@@ -125,47 +147,65 @@
         }
 
         // --- INSERÇÃO NO SLIDE ---
+        async function insertTimerToAllSlides() {
+            logDebug("Iniciando inserção em TODOS os slides...");
+            try {
+                await PowerPoint.run(async (context) => {
+                    const slides = context.presentation.slides;
+                    slides.load("items");
+                    await context.sync();
+                    
+                    for (let i = 0; i < slides.items.length; i++) {
+                        const shapes = slides.items[i].shapes;
+                        const textShape = shapes.addTextBox("00:00", { left: 800, top: 20, width: 150, height: 50 });
+                        textShape.name = "Timer_Global";
+                        textShape.textFrame.textRange.font.name = document.getElementById('fontName').value;
+                        textShape.textFrame.textRange.font.size = parseInt(document.getElementById('fontSize').value);
+                    }
+                    await context.sync();
+                });
+                logDebug("Sucesso: Formas inseridas em todos os slides.", "success");
+            } catch (error) {
+                logDebug("Erro na inserção global: " + error.message, "error");
+                if (error instanceof OfficeExtension.Error) {
+                    logDebug("Debug Info: " + JSON.stringify(error.debugInfo), "error");
+                }
+            }
+        }
+
         async function insertTimerToGroup(id) {
             const group = groups.find(x => x.id === id);
             if (!group) return;
 
-            await PowerPoint.run(async (context) => {
-                const slides = context.presentation.slides;
-                slides.load("items");
-                await context.sync();
-                
-                const font = document.getElementById('fontName').value;
-                const size = parseInt(document.getElementById('fontSize').value);
-                
-                // Ajusta para o index do array (0-based) e evita estourar o limite de slides
-                const startIdx = Math.max(0, group.start - 1);
-                const endIdx = Math.min(slides.items.length - 1, group.end - 1);
+            logDebug(`Iniciando inserção no Grupo (Slides ${group.start}-${group.end})...`);
+            try {
+                await PowerPoint.run(async (context) => {
+                    const slides = context.presentation.slides;
+                    slides.load("items");
+                    await context.sync();
+                    
+                    const font = document.getElementById('fontName').value;
+                    const size = parseInt(document.getElementById('fontSize').value);
+                    
+                    const startIdx = Math.max(0, group.start - 1);
+                    const endIdx = Math.min(slides.items.length - 1, group.end - 1);
 
-                for (let i = startIdx; i <= endIdx; i++) {
-                    const shapes = slides.items[i].shapes;
-                    const textShape = shapes.addTextBox("00:00", { left: 800, top: 20, width: 150, height: 50 });
-                    textShape.name = "Timer_Global";
-                    textShape.textFrame.textRange.font.name = font;
-                    textShape.textRange.font.size = size;
+                    for (let i = startIdx; i <= endIdx; i++) {
+                        const shapes = slides.items[i].shapes;
+                        const textShape = shapes.addTextBox("00:00", { left: 800, top: 20, width: 150, height: 50 });
+                        textShape.name = "Timer_Global";
+                        textShape.textFrame.textRange.font.name = font;
+                        textShape.textRange.font.size = size;
+                    }
+                    await context.sync();
+                });
+                logDebug(`Sucesso: Formas inseridas no grupo.`, "success");
+            } catch (error) {
+                logDebug("Erro no grupo: " + error.message, "error");
+                if (error instanceof OfficeExtension.Error) {
+                    logDebug("Debug Info: " + JSON.stringify(error.debugInfo), "error");
                 }
-                await context.sync();
-            });
-        }
-        async function insertTimerToAllSlides() {
-            await PowerPoint.run(async (context) => {
-                const slides = context.presentation.slides;
-                slides.load("items");
-                await context.sync();
-                
-                for (let i = 0; i < slides.items.length; i++) {
-                    const shapes = slides.items[i].shapes;
-                    const textShape = shapes.addTextBox("00:00", { left: 800, top: 20, width: 150, height: 50 });
-                    textShape.name = "Timer_Global";
-                    textShape.textFrame.textRange.font.name = document.getElementById('fontName').value;
-                    textShape.textFrame.textRange.font.size = parseInt(document.getElementById('fontSize').value);
-                }
-                await context.sync();
-            });
+            }
         }
 
         // --- CORE ENGINE (TIMER) ---
