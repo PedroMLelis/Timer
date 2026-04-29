@@ -105,10 +105,11 @@
                 div.innerHTML = `
                     <div class="group-header"><strong>Grupo: Slides ${g.start}-${g.end}</strong> <button class="danger" onclick="removeGroup(${g.id})">Remover</button></div>
                     <div class="row">
-                        <div><label>Início</label><input type="number" value="${g.start}" onchange="updateGroupData(${g.id}, 'start', this.value)"></div>
-                        <div><label>Fim</label><input type="number" value="${g.end}" onchange="updateGroupData(${g.id}, 'end', this.value)"></div>
+                        <div><label>Início</label><input type="number" value="${g.start}" onchange="updateGroupData(${g.id}, 'start', parseInt(this.value))"></div>
+                        <div><label>Fim</label><input type="number" value="${g.end}" onchange="updateGroupData(${g.id}, 'end', parseInt(this.value))"></div>
                         <div><label>Min:Seg</label><input type="text" value="${g.duration}" onchange="updateGroupData(${g.id}, 'duration', this.value)"></div>
                     </div>
+                    <button class="secondary" style="margin-top: 10px; font-size: 11px;" onclick="insertTimerToGroup(${g.id})">INSERIR FORMAS NESTE GRUPO</button>
                 `;
                 container.appendChild(div);
             });
@@ -116,10 +117,40 @@
 
         function updateGroupData(id, field, value) {
             const g = groups.find(x => x.id === id);
-            if (g) g[field] = value;
+            if (g) {
+                g[field] = value;
+                // Re-renderiza para atualizar o título do grupo se mudar os slides
+                if (field === 'start' || field === 'end') renderGroups();
+            }
         }
 
         // --- INSERÇÃO NO SLIDE ---
+        async function insertTimerToGroup(id) {
+            const group = groups.find(x => x.id === id);
+            if (!group) return;
+
+            await PowerPoint.run(async (context) => {
+                const slides = context.presentation.slides;
+                slides.load("items");
+                await context.sync();
+                
+                const font = document.getElementById('fontName').value;
+                const size = parseInt(document.getElementById('fontSize').value);
+                
+                // Ajusta para o index do array (0-based) e evita estourar o limite de slides
+                const startIdx = Math.max(0, group.start - 1);
+                const endIdx = Math.min(slides.items.length - 1, group.end - 1);
+
+                for (let i = startIdx; i <= endIdx; i++) {
+                    const shapes = slides.items[i].shapes;
+                    const textShape = shapes.addTextBox("00:00", { left: 800, top: 20, width: 150, height: 50 });
+                    textShape.name = "Timer_Global";
+                    textShape.textFrame.textRange.font.name = font;
+                    textShape.textRange.font.size = size;
+                }
+                await context.sync();
+            });
+        }
         async function insertTimerToAllSlides() {
             await PowerPoint.run(async (context) => {
                 const slides = context.presentation.slides;
