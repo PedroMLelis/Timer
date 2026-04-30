@@ -29,6 +29,7 @@
         .debug-panel { background: #1e1e1e; color: #d4d4d4; font-family: monospace; font-size: 11px; padding: 10px; height: 120px; overflow-y: auto; border-top: 2px solid var(--primary); position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;}
         .debug-error { color: #f48771; }
         .debug-success { color: #89d185; }
+        .debug-warning { color: #e5e510; }
     </style>
 </head>
 <body>
@@ -70,9 +71,8 @@
     <!-- TIMER GERAL -->
     <div id="tab1" class="content">
         <div class="field"><label>Duração (mm:ss)</label><input type="text" id="durationGeral" value="10:00"></div>
-        <div class="field"><input type="checkbox" id="overtimeGeral"> <label style="display:inline">Permitir estourar</label></div>
         <div class="status-card" id="displayGeral">00:00</div>
-        <button onclick="controlGeral('start')">INICIAR GERAL</button>
+        <button onclick="controlGeral('start')">INICIAR CONTAGEM</button>
         <button class="secondary" onclick="controlGeral('pause')">PAUSAR</button>
     </div>
 
@@ -91,13 +91,17 @@
 
         function logDebug(msg, type = 'info') {
             const panel = document.getElementById('debugPanel');
-            const className = type === 'error' ? 'debug-error' : (type === 'success' ? 'debug-success' : '');
+            let className = '';
+            if (type === 'error') className = 'debug-error';
+            if (type === 'success') className = 'debug-success';
+            if (type === 'warning') className = 'debug-warning';
+            
             panel.innerHTML += `<div class="${className}">[${new Date().toLocaleTimeString()}] ${msg}</div>`;
             panel.scrollTop = panel.scrollHeight;
         }
 
         Office.onReady((info) => {
-            logDebug(`[SISTEMA] Suplemento Iniciado. Versão: ${SESSION_VERSION}`, 'success');
+            logDebug(`[SISTEMA] Motor 2.0 Iniciado. Versão: ${SESSION_VERSION}`, 'success');
         });
 
         function switchTab(i) {
@@ -105,8 +109,20 @@
             document.querySelectorAll('.tab').forEach((t, idx) => t.classList.toggle('active', idx === i));
         }
 
+        // --- INSERÇÃO ---
         async function insertTimerToAllSlides() {
-            logDebug("--- Iniciando processo de inserção global ---");
+            logDebug("Iniciando inserção em TODOS os slides...");
+            await runInsertLogic(null);
+        }
+
+        async function insertTimerToGroup(id) {
+            const group = groups.find(x => x.id === id);
+            if (!group) return;
+            logDebug(`Iniciando inserção no GRUPO (Slides ${group.start} a ${group.end})...`);
+            await runInsertLogic(group);
+        }
+
+        async function runInsertLogic(group) {
             const x = parseInt(document.getElementById('posX').value);
             const y = parseInt(document.getElementById('posY').value);
             const colorZ = document.getElementById('colorZ').value;
@@ -114,14 +130,20 @@
             const size = parseInt(document.getElementById('fontSize').value);
 
             try {
-                logDebug("Abrindo conexão com o PowerPoint.run...");
                 await PowerPoint.run(async (context) => {
                     const slides = context.presentation.slides;
                     slides.load("items");
                     await context.sync();
                     
-                    logDebug(`Desenhando formas em ${slides.items.length} slide(s)...`);
-                    for (let i = 0; i < slides.items.length; i++) {
+                    let startIdx = 0;
+                    let endIdx = slides.items.length - 1;
+
+                    if (group) {
+                        startIdx = Math.max(0, group.start - 1);
+                        endIdx = Math.min(slides.items.length - 1, group.end - 1);
+                    }
+
+                    for (let i = startIdx; i <= endIdx; i++) {
                         const shapes = slides.items[i].shapes;
                         const textShape = shapes.addTextBox("00:00", { left: x, top: y, width: 200, height: 60 });
                         textShape.name = "Timer_Global";
@@ -130,14 +152,14 @@
                         textShape.textFrame.textRange.font.color = colorZ;
                     }
                     await context.sync();
-                    logDebug("Formas salvas no documento com sucesso.");
+                    logDebug("Formas salvas com sucesso!", "success");
                 });
-                logDebug("PROCESSO CONCLUÍDO COM SUCESSO", "success");
             } catch (error) {
-                logDebug("ERRO FATAL: " + error.message, "error");
+                logDebug("ERRO na Inserção: " + error.message, "error");
             }
         }
 
+        // --- LÓGICA DE GRUPOS UI ---
         function addGroup() {
             const id = Date.now();
             groups.push({ id, start: 1, end: 2, duration: "05:00", currentSeconds: 0, totalSeconds: 0, isRunning: false });
@@ -157,6 +179,7 @@
                         <div><label>Até</label><input type="number" value="${g.end}" onchange="updateGroup(${g.id}, 'end', parseInt(this.value))"></div>
                         <div><label>Tempo</label><input type="text" value="${g.duration}" onchange="updateGroup(${g.id}, 'duration', this.value)"></div>
                     </div>
+                    <button class="secondary" style="margin-top: 10px; font-size: 11px;" onclick="insertTimerToGroup(${g.id})">INSERIR NESTE GRUPO</button>
                 `;
                 container.appendChild(div);
             });
@@ -169,67 +192,89 @@
 
         function removeGroup(id) { groups = groups.filter(g => g.id !== id); renderGroups(); }
 
+        // --- MOTOR DO RELÓGIO (DESACOPLADO) ---
         function controlGeral(action) {
             if (action === 'start' && !geralState.isRunning) {
                 const p = document.getElementById('durationGeral').value.split(':');
                 geralState.total = geralState.seconds = parseInt(p[0]) * 60 + (parseInt(p[1]) || 0);
                 geralState.isRunning = true;
                 geralState.interval = setInterval(mainTick, 1000);
-                logDebug("Timer Iniciado.");
+                logDebug("Cronômetro Geral INICIADO.", "success");
             } else if (action === 'pause') {
                 geralState.isRunning = false;
                 clearInterval(geralState.interval);
-                logDebug("Timer Pausado.");
+                logDebug("Cronômetro PAUSADO.", "warning");
             }
         }
 
         async function mainTick() {
             if (!geralState.isRunning) return;
+            
+            // 1. O tempo GERAL sempre corre (evita o relógio travar)
             geralState.seconds--;
             
+            let displayTime = geralState.seconds;
+            let totalRef = geralState.total;
+            let currentIdx = -1;
+
+            // 2. Tenta descobrir em qual slide estamos silenciosamente
             try {
                 await PowerPoint.run(async (context) => {
                     const selectedSlides = context.presentation.getSelectedSlides();
                     selectedSlides.load("items/index");
                     await context.sync();
-                    
-                    const currentIdx = selectedSlides.items[0].index + 1;
-                    let displayTime = geralState.seconds;
-                    let totalRef = geralState.total;
-
-                    const group = groups.find(g => currentIdx >= g.start && currentIdx <= g.end);
-                    if (group) {
-                        if (!group.isRunning) {
-                            const p = group.duration.split(':');
-                            group.totalSeconds = group.currentSeconds = parseInt(p[0]) * 60 + (parseInt(p[1]) || 0);
-                            group.isRunning = true;
-                        }
-                        group.currentSeconds--;
-                        displayTime = group.currentSeconds;
-                        totalRef = group.totalSeconds;
-                    } else {
-                        groups.forEach(g => g.isRunning = false);
-                    }
-
-                    const timeStr = formatTime(displayTime);
-                    const color = getAlertColor(displayTime, totalRef);
-
-                    document.getElementById('displayGeral').innerText = timeStr;
-                    document.getElementById('displayGeral').style.color = color;
-
-                    const shapes = selectedSlides.items[0].shapes;
-                    const shape = shapes.getItemOrNullObject("Timer_Global");
-                    shape.load("textFrame/textRange/font");
-                    await context.sync();
-
-                    if (!shape.isNullObject) {
-                        shape.textFrame.textRange.text = timeStr;
-                        shape.textFrame.textRange.font.color = color;
-                        await context.sync();
+                    if (selectedSlides.items.length > 0) {
+                        currentIdx = selectedSlides.items[0].index + 1;
                     }
                 });
             } catch (e) {
-                // Silenciado para evitar poluição visual no log por atrasos de UI
+                // Se falhar (modo apresentação as vezes bloqueia), o relógio segue rodando
+            }
+
+            // 3. Avalia se deve assumir a regra de um GRUPO
+            if (currentIdx !== -1) {
+                const group = groups.find(g => currentIdx >= g.start && currentIdx <= g.end);
+                if (group) {
+                    if (!group.isRunning) {
+                        const p = group.duration.split(':');
+                        group.totalSeconds = group.currentSeconds = parseInt(p[0]) * 60 + (parseInt(p[1]) || 0);
+                        group.isRunning = true;
+                        logDebug(`AUTO-START: Grupo dos Slides ${group.start}-${group.end} acionado.`, "success");
+                    }
+                    group.currentSeconds--;
+                    displayTime = group.currentSeconds;
+                    totalRef = group.totalSeconds;
+                } else {
+                    // Reseta os grupos se sairmos deles
+                    groups.forEach(g => g.isRunning = false);
+                }
+            }
+
+            // 4. ATUALIZA A TELA (Barra Lateral) IMEDIATAMENTE
+            const timeStr = formatTime(displayTime);
+            const color = getAlertColor(displayTime, totalRef);
+
+            document.getElementById('displayGeral').innerText = timeStr;
+            document.getElementById('displayGeral').style.color = color;
+
+            // 5. ATUALIZA A TELA (Forma no Slide)
+            if (currentIdx !== -1) {
+                try {
+                    await PowerPoint.run(async (context) => {
+                        const slide = context.presentation.slides.getItemAt(currentIdx - 1);
+                        const shape = slide.shapes.getItemOrNullObject("Timer_Global");
+                        shape.load("textFrame/textRange/font");
+                        await context.sync();
+
+                        if (!shape.isNullObject) {
+                            shape.textFrame.textRange.text = timeStr;
+                            shape.textFrame.textRange.font.color = color;
+                            await context.sync();
+                        }
+                    });
+                } catch (e) {
+                    // Silenciado
+                }
             }
         }
 
