@@ -1,24 +1,103 @@
-<script>
-        // --- CONTROLE DE VERSÃO ---
-        // Gera um ID único toda vez que o arquivo index.html for realmente carregado do servidor
-        const SESSION_VERSION = "Build_" + new Date().getTime().toString().slice(-6);
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timer Sidebar</title>
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <style>
+        :root { --primary: #2b579a; --bg: #f3f2f1; --white: #ffffff; --danger: #a4262c; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; background: var(--bg); font-size: 14px; color: #333; }
+        .tabs { display: flex; background: var(--white); border-bottom: 1px solid #ddd; position: sticky; top: 0; z-index: 10; }
+        .tab { flex: 1; padding: 12px 5px; text-align: center; cursor: pointer; border-bottom: 3px solid transparent; color: #666; font-weight: 600; }
+        .tab.active { border-bottom-color: var(--primary); color: var(--primary); }
+        .content { padding: 15px; display: none; padding-bottom: 160px; }
+        .content.active { display: block; }
         
+        .field { margin-bottom: 12px; border-bottom: 1px solid #e1dfdd; padding-bottom: 10px; }
+        label { display: block; margin-bottom: 4px; font-weight: bold; font-size: 11px; text-transform: uppercase; color: #666; }
+        input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .row { display: flex; gap: 8px; align-items: flex-end; }
+        
+        button { width: 100%; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 5px; }
+        button.secondary { background: #666; }
+        button.danger { background: var(--danger); padding: 5px; font-size: 11px; width: auto; }
+        
+        .group-item { background: #fff; border: 1px solid #ddd; padding: 10px; border-radius: 4px; margin-bottom: 10px; }
+        .status-card { background: #333; color: #0f0; padding: 10px; border-radius: 4px; margin-top: 10px; font-family: monospace; text-align: center; font-size: 1.4em; }
+        
+        .debug-panel { background: #1e1e1e; color: #d4d4d4; font-family: monospace; font-size: 11px; padding: 10px; height: 120px; overflow-y: auto; border-top: 2px solid var(--primary); position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;}
+        .debug-error { color: #f48771; }
+        .debug-success { color: #89d185; }
+    </style>
+</head>
+<body>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab(0)">Config</div>
+        <div class="tab" onclick="switchTab(1)">Geral</div>
+        <div class="tab" onclick="switchTab(2)">Grupos</div>
+    </div>
+
+    <!-- CONFIGURAÇÕES -->
+    <div id="tab0" class="content active">
+        <div class="field">
+            <label>Fonte e Tamanho</label>
+            <div class="row">
+                <input type="text" id="fontName" value="Arial">
+                <input type="number" id="fontSize" value="32" style="width: 70px;">
+            </div>
+        </div>
+        <div class="field">
+            <label>Posição no Slide (X / Y)</label>
+            <div class="row">
+                <input type="number" id="posX" value="50" placeholder="X (Left)">
+                <input type="number" id="posY" value="20" placeholder="Y (Top)">
+            </div>
+        </div>
+        <div class="field">
+            <label>Cores (Início / Alerta X / Alerta Y)</label>
+            <div class="row">
+                <input type="color" id="colorZ" value="#00FF00">
+                <input type="color" id="colorX" value="#FFA500">
+                <input type="color" id="colorY" value="#FF0000">
+            </div>
+        </div>
+        <button onclick="insertTimerToAllSlides()">INSERIR EM TODOS OS SLIDES</button>
+        <button class="secondary" style="font-size: 11px; margin-top: 15px;" onclick="window.location.reload(true)">🔄 ATUALIZAR CÓDIGO</button>
+    </div>
+
+    <!-- TIMER GERAL -->
+    <div id="tab1" class="content">
+        <div class="field"><label>Duração (mm:ss)</label><input type="text" id="durationGeral" value="10:00"></div>
+        <div class="field"><input type="checkbox" id="overtimeGeral"> <label style="display:inline">Permitir estourar</label></div>
+        <div class="status-card" id="displayGeral">00:00</div>
+        <button onclick="controlGeral('start')">INICIAR GERAL</button>
+        <button class="secondary" onclick="controlGeral('pause')">PAUSAR</button>
+    </div>
+
+    <!-- GRUPOS -->
+    <div id="tab2" class="content">
+        <button onclick="addGroup()">+ NOVO GRUPO</button>
+        <div id="groupsContainer" style="margin-top: 15px;"></div>
+    </div>
+
+    <div id="debugPanel" class="debug-panel"></div>
+
+    <script>
+        const SESSION_VERSION = "Build_" + new Date().getTime().toString().slice(-6);
         let groups = [];
         let geralState = { seconds: 0, total: 0, isRunning: false, interval: null };
 
-        // Função de log super granular
         function logDebug(msg, type = 'info') {
             const panel = document.getElementById('debugPanel');
             const className = type === 'error' ? 'debug-error' : (type === 'success' ? 'debug-success' : '');
             panel.innerHTML += `<div class="${className}">[${new Date().toLocaleTimeString()}] ${msg}</div>`;
-            panel.scrollTop = panel.scrollHeight; // Rola sempre para a última mensagem
+            panel.scrollTop = panel.scrollHeight;
         }
 
         Office.onReady((info) => {
             logDebug(`[SISTEMA] Suplemento Iniciado. Versão: ${SESSION_VERSION}`, 'success');
-            if (info.host) {
-                logDebug(`[SISTEMA] Host detectado: ${info.host}`);
-            }
         });
 
         function switchTab(i) {
@@ -26,10 +105,8 @@
             document.querySelectorAll('.tab').forEach((t, idx) => t.classList.toggle('active', idx === i));
         }
 
-        // --- INSERÇÃO COM DEBUG PASSO A PASSO ---
         async function insertTimerToAllSlides() {
             logDebug("--- Iniciando processo de inserção global ---");
-            
             const x = parseInt(document.getElementById('posX').value);
             const y = parseInt(document.getElementById('posY').value);
             const colorZ = document.getElementById('colorZ').value;
@@ -37,20 +114,14 @@
             const size = parseInt(document.getElementById('fontSize').value);
 
             try {
-                logDebug("1. Abrindo conexão com o PowerPoint.run...");
+                logDebug("Abrindo conexão com o PowerPoint.run...");
                 await PowerPoint.run(async (context) => {
-                    
-                    logDebug("2. Requisitando lista de slides...");
                     const slides = context.presentation.slides;
                     slides.load("items");
-                    
-                    logDebug("3. Sincronizando dados iniciais (Aguarde)...");
                     await context.sync();
                     
-                    logDebug(`4. Sucesso. A apresentação possui ${slides.items.length} slide(s).`);
-
+                    logDebug(`Desenhando formas em ${slides.items.length} slide(s)...`);
                     for (let i = 0; i < slides.items.length; i++) {
-                        logDebug(` > Desenhando forma no Slide ${i + 1}...`);
                         const shapes = slides.items[i].shapes;
                         const textShape = shapes.addTextBox("00:00", { left: x, top: y, width: 200, height: 60 });
                         textShape.name = "Timer_Global";
@@ -58,22 +129,15 @@
                         textShape.textFrame.textRange.font.size = size;
                         textShape.textFrame.textRange.font.color = colorZ;
                     }
-
-                    logDebug("5. Enviando formas para o documento (Sincronização Final)...");
                     await context.sync();
-                    logDebug("6. Formas salvas no documento com sucesso.");
+                    logDebug("Formas salvas no documento com sucesso.");
                 });
-                
-                logDebug("--- PROCESSO CONCLUÍDO COM SUCESSO ---", "success");
+                logDebug("PROCESSO CONCLUÍDO COM SUCESSO", "success");
             } catch (error) {
                 logDebug("ERRO FATAL: " + error.message, "error");
-                if (error instanceof OfficeExtension.Error) {
-                    logDebug("Detalhe do Erro: " + JSON.stringify(error.debugInfo), "error");
-                }
             }
         }
 
-        // --- LÓGICA DE GRUPOS ---
         function addGroup() {
             const id = Date.now();
             groups.push({ id, start: 1, end: 2, duration: "05:00", currentSeconds: 0, totalSeconds: 0, isRunning: false });
@@ -105,7 +169,6 @@
 
         function removeGroup(id) { groups = groups.filter(g => g.id !== id); renderGroups(); }
 
-        // --- ENGINE DO RELÓGIO ---
         function controlGeral(action) {
             if (action === 'start' && !geralState.isRunning) {
                 const p = document.getElementById('durationGeral').value.split(':');
@@ -121,55 +184,53 @@
         }
 
         async function mainTick() {
-            if (geralState.isRunning) geralState.seconds--;
+            if (!geralState.isRunning) return;
+            geralState.seconds--;
             
-            await PowerPoint.run(async (context) => {
-                const selectedSlides = context.presentation.getSelectedSlides();
-                selectedSlides.load("items/index");
-                await context.sync();
-                
-                const currentIdx = selectedSlides.items[0].index + 1;
-                let displayTime = geralState.seconds;
-                let totalRef = geralState.total;
-
-                const group = groups.find(g => currentIdx >= g.start && currentIdx <= g.end);
-                if (group) {
-                    if (!group.isRunning) {
-                        const p = group.duration.split(':');
-                        group.totalSeconds = group.currentSeconds = parseInt(p[0]) * 60 + (parseInt(p[1]) || 0);
-                        group.isRunning = true;
-                        logDebug(`Entrou no Grupo (Slides ${group.start}-${group.end}).`);
-                    }
-                    group.currentSeconds--;
-                    displayTime = group.currentSeconds;
-                    totalRef = group.totalSeconds;
-                } else {
-                    // Reseta status do grupo se sair dele
-                    groups.forEach(g => g.isRunning = false);
-                }
-
-                const timeStr = formatTime(displayTime);
-                const color = getAlertColor(displayTime, totalRef);
-
-                // Update Sidebar
-                document.getElementById('displayGeral').innerText = timeStr;
-                document.getElementById('displayGeral').style.color = color;
-
-                // Update Slide
-                const shapes = selectedSlides.items[0].shapes;
-                const shape = shapes.getItemOrNullObject("Timer_Global");
-                shape.load("textFrame/textRange/font");
-                await context.sync();
-
-                if (!shape.isNullObject) {
-                    shape.textFrame.textRange.text = timeStr;
-                    shape.textFrame.textRange.font.color = color;
+            try {
+                await PowerPoint.run(async (context) => {
+                    const selectedSlides = context.presentation.getSelectedSlides();
+                    selectedSlides.load("items/index");
                     await context.sync();
-                }
-            }).catch((e)=>{ 
-                // Erros no tick a cada segundo são silenciados para não inundar o debug,
-                // já que costumam ser apenas atrasos de UI.
-            });
+                    
+                    const currentIdx = selectedSlides.items[0].index + 1;
+                    let displayTime = geralState.seconds;
+                    let totalRef = geralState.total;
+
+                    const group = groups.find(g => currentIdx >= g.start && currentIdx <= g.end);
+                    if (group) {
+                        if (!group.isRunning) {
+                            const p = group.duration.split(':');
+                            group.totalSeconds = group.currentSeconds = parseInt(p[0]) * 60 + (parseInt(p[1]) || 0);
+                            group.isRunning = true;
+                        }
+                        group.currentSeconds--;
+                        displayTime = group.currentSeconds;
+                        totalRef = group.totalSeconds;
+                    } else {
+                        groups.forEach(g => g.isRunning = false);
+                    }
+
+                    const timeStr = formatTime(displayTime);
+                    const color = getAlertColor(displayTime, totalRef);
+
+                    document.getElementById('displayGeral').innerText = timeStr;
+                    document.getElementById('displayGeral').style.color = color;
+
+                    const shapes = selectedSlides.items[0].shapes;
+                    const shape = shapes.getItemOrNullObject("Timer_Global");
+                    shape.load("textFrame/textRange/font");
+                    await context.sync();
+
+                    if (!shape.isNullObject) {
+                        shape.textFrame.textRange.text = timeStr;
+                        shape.textFrame.textRange.font.color = color;
+                        await context.sync();
+                    }
+                });
+            } catch (e) {
+                // Silenciado para evitar poluição visual no log por atrasos de UI
+            }
         }
 
         function formatTime(s) {
